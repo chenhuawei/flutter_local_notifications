@@ -51,6 +51,9 @@ NSString *const SECOND = @"second";
 NSString *const NOTIFICATION_ID = @"NotificationId";
 NSString *const PAYLOAD = @"payload";
 NSString *const NOTIFICATION_LAUNCHED_APP = @"notificationLaunchedApp";
+
+NSString *const REGISTER_FOR_REMOTE_NOTIFICATIONS = @"registerForRemoteNotifications";
+
 NSString *launchPayload;
 bool displayAlert;
 bool playSound;
@@ -264,6 +267,8 @@ typedef NS_ENUM(NSInteger, RepeatInterval) {
         result(notificationAppLaunchDetails);
     } else if([INITIALIZED_HEADLESS_SERVICE_METHOD isEqualToString:call.method]) {
         result(nil);
+    } else if([REGISTER_FOR_REMOTE_NOTIFICATIONS isEqualToString:call.method]) {
+        [[UIApplication sharedApplication] registerForRemoteNotifications];
     }
     else {
         result(FlutterMethodNotImplemented);
@@ -500,4 +505,35 @@ didReceiveLocalNotification:(UILocalNotification*)notification {
     [channel invokeMethod:DID_RECEIVE_LOCAL_NOTIFICATION arguments:arguments];
 }
 
++ (NSString*) serializeDeviceToken:(NSData *) deviceToken {
+    NSMutableString *str = [NSMutableString stringWithCapacity:64];
+    int length = [deviceToken length];
+    char *bytes = malloc(sizeof(char) * length);
+
+    [deviceToken getBytes:bytes length:length];
+
+    for (int i = 0; i < length; i++)
+    {
+        [str appendFormat:@"%02.2hhX", bytes[i]];
+    }
+    free(bytes);
+
+    return str;
+}
+
+- (void)application:(UIApplication *)application
+didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
+    NSLog(@"didRegisterForRemoteNotificationsWithDeviceToken");
+    NSString* tokenString = [FlutterLocalNotificationsPlugin serializeDeviceToken:deviceToken];
+    [channel invokeMethod:@"didRegisterForRemoteNotificationsWithDeviceToken" arguments:tokenString];
+}
+
+- (BOOL)application:(UIApplication*)application
+    didReceiveRemoteNotification:(NSDictionary*)userInfo
+          fetchCompletionHandler:(void (^)(UIBackgroundFetchResult result))completionHandler {
+    NSLog(@"didReceiveRemoteNotification");
+
+    [channel invokeMethod:@"didReceiveRemoteNotification" arguments:userInfo];
+    return YES;
+}
 @end

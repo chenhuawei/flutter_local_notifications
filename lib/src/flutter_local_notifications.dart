@@ -108,6 +108,10 @@ class FlutterLocalNotificationsPlugin {
         result.containsKey('payload') ? result['payload'] : null);
   }
 
+  Future registerForRemoteNotifications() async {
+    await _channel.invokeMethod('registerForRemoteNotifications');
+  }
+
   /// Show a notification with an optional payload that will be passed back to the app when a notification is tapped
   Future show(int id, String title, String body,
       NotificationDetails notificationDetails,
@@ -243,6 +247,13 @@ class FlutterLocalNotificationsPlugin {
             call.arguments['title'],
             call.arguments['body'],
             call.arguments['payload']);
+      case 'didRegisterForRemoteNotificationsWithDeviceToken':
+        final String token = call.arguments;
+        print('dart token $token');
+        return null;
+      case 'didReceiveRemoteNotification':
+        print('dart didReceiveRemoteNotification ${call.arguments}');
+        return null;
       default:
         return Future.error('method not defined');
     }

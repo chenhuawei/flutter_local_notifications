@@ -46,6 +46,8 @@ class _HomePageState extends State<HomePage> {
         initializationSettingsAndroid, initializationSettingsIOS);
     flutterLocalNotificationsPlugin.initialize(initializationSettings,
         onSelectNotification: onSelectNotification);
+
+    flutterLocalNotificationsPlugin.registerForRemoteNotifications();
   }
 
   @override
