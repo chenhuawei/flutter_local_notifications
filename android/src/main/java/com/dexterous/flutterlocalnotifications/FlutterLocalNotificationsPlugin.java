@@ -85,6 +85,8 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
     private static final String NOTIFICATION_LAUNCHED_APP = "notificationLaunchedApp";
     private static final String INVALID_DRAWABLE_RESOURCE_ERROR_MESSAGE = "The resource %s could not be found. Please make sure it has been added as a drawable resource to your Android head project.";
     private static final String INVALID_RAW_RESOURCE_ERROR_MESSAGE = "The resource %s could not be found. Please make sure it has been added as a raw resource to your Android head project.";
+    private static final String REGISTER_FOR_REMOTE_NOTIFICATIONS = "registerForRemoteNotifications";
+
     public static String NOTIFICATION_ID = "notification_id";
     public static String NOTIFICATION = "notification";
     public static String NOTIFICATION_DETAILS = "notificationDetails";
@@ -658,6 +660,9 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
                 break;
             case CANCEL_ALL_METHOD:
                 cancelAllNotifications(result);
+                break;
+            case REGISTER_FOR_REMOTE_NOTIFICATIONS:
+
                 break;
             default:
                 result.notImplemented();
