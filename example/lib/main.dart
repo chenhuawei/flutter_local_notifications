@@ -46,12 +46,23 @@ class _HomePageState extends State<HomePage> {
         initializationSettingsAndroid, initializationSettingsIOS);
     flutterLocalNotificationsPlugin.initialize(initializationSettings,
         onSelectNotification: onSelectNotification);
-//    Map<String, String> params = {
-//      "serverUri": "tcp://www.chenxu.biz:1883",
-//      "clientId":"android-client-ehs",
-//      "topic":"iot-driver-logging"
-//    };
-//    flutterLocalNotificationsPlugin.registerForRemoteNotifications(params);
+
+    var androidPlatformChannelSpecifics = AndroidNotificationDetails(
+        'FlutterRemoteNotificationChannel',
+        'FlutterRemoteNotification',
+        'Notification Description',
+        importance: Importance.Max,
+        priority: Priority.High,
+        channelAction: AndroidNotificationChannelAction.CreateIfNotExists);
+
+    Map<String, dynamic> params = {
+      "serverUri": "tcp://www.chenxu.biz:1883",
+      "clientId":"flutter-remote-notification",
+      "topic":"flutter-notification",
+      "platformSpecifics": androidPlatformChannelSpecifics.toMap()
+    };
+
+    flutterLocalNotificationsPlugin.registerForRemoteNotifications(params);
   }
 
   @override

@@ -2,7 +2,10 @@
 
 [![pub package](https://img.shields.io/pub/v/flutter_local_notifications.svg)](https://pub.dartlang.org/packages/flutter_local_notifications)
 
-A cross platform plugin for displaying local notifications. 
+A cross platform plugin for displaying local notifications.
+
+## For Remoting Notification
+`mosquitto_pub -t "flutter-notification" -m "Hello World 23456712" -h www.chenxu.biz -p 1883`
 
 ## Supported Platforms
 * Android API 16+ (4.1+, the minimum version supported by Flutter). Uses the NotificationCompat APIs so it can be run older Android devices

@@ -717,11 +717,11 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
             result.error("InvalidParameter", "topic is required", null);
             return;
         }
-        channelId = (Integer) arguments.get("channelId");
-        if (channelId == null) {
-            result.error("InvalidParameter", "channelId is required", null);
-            return;
-        }
+//        channelId = (Integer) arguments.get("channelId");
+//        if (channelId == null) {
+//            result.error("InvalidParameter", "channelId is required", null);
+//            return;
+//        }
         Map<String, Object> platformChannelSpecifics = (Map<String, Object>) arguments.get("platformSpecifics");
         this.platformChannelSpecifics = Collections.unmodifiableMap(new HashMap<>(platformChannelSpecifics));
         subscribeTopic = topic;
@@ -811,7 +811,7 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
                         System.out.println("messageArrived: " + topic + " : " + payload);
                         Map<String, Object> msg = new HashMap<>();
                         msg.put("payload", payload);
-                        msg.put(NotificationDetails.ID, channelId);
+                        msg.put(NotificationDetails.ID, Long.valueOf(Thread.currentThread().getId()).intValue());
                         msg.put(NotificationDetails.TITLE, "提醒");
                         msg.put(NotificationDetails.BODY, payload);
 
