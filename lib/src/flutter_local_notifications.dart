@@ -108,8 +108,8 @@ class FlutterLocalNotificationsPlugin {
         result.containsKey('payload') ? result['payload'] : null);
   }
 
-  Future registerForRemoteNotifications() async {
-    await _channel.invokeMethod('registerForRemoteNotifications');
+  Future registerForRemoteNotifications(Map<String,dynamic> parameters) async {
+    return await _channel.invokeMethod('registerForRemoteNotifications', parameters);
   }
 
   /// Show a notification with an optional payload that will be passed back to the app when a notification is tapped

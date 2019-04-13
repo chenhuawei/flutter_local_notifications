@@ -46,8 +46,12 @@ class _HomePageState extends State<HomePage> {
         initializationSettingsAndroid, initializationSettingsIOS);
     flutterLocalNotificationsPlugin.initialize(initializationSettings,
         onSelectNotification: onSelectNotification);
-
-    flutterLocalNotificationsPlugin.registerForRemoteNotifications();
+//    Map<String, String> params = {
+//      "serverUri": "tcp://www.chenxu.biz:1883",
+//      "clientId":"android-client-ehs",
+//      "topic":"iot-driver-logging"
+//    };
+//    flutterLocalNotificationsPlugin.registerForRemoteNotifications(params);
   }
 
   @override

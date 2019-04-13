@@ -34,9 +34,21 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.reflect.TypeToken;
 
+import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.DisconnectedBufferOptions;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
+import org.eclipse.paho.client.mqttv3.IMqttMessageListener;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttCallbackExtended;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
+import org.eclipse.paho.client.mqttv3.MqttException;
+import org.eclipse.paho.client.mqttv3.MqttMessage;
+
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -93,6 +105,15 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
     public static String REPEAT = "repeat";
     private final Registrar registrar;
     private MethodChannel channel;
+
+    MqttAndroidClient mqttAndroidClient;
+
+    private String subscribeTopic;
+
+    private Map<String, Object> platformChannelSpecifics;
+
+    Integer channelId;
+
 
     private FlutterLocalNotificationsPlugin(Registrar registrar) {
         this.registrar = registrar;
@@ -662,11 +683,154 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
                 cancelAllNotifications(result);
                 break;
             case REGISTER_FOR_REMOTE_NOTIFICATIONS:
-
+                try {
+                    registerForRemoteNotifications(call, result);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    result.error("RegisterNotificationException", "registerForRemoteNotifications failed", e);
+                }
                 break;
             default:
                 result.notImplemented();
                 break;
+        }
+    }
+
+    private void registerForRemoteNotifications(MethodCall call, Result result) {
+        Map<String, Object> arguments = call.arguments();
+        if (arguments == null || arguments.isEmpty()) {
+            result.error("InvalidParameter", "no parameters", null);
+            return;
+        }
+        String serverUri = (String) arguments.get("serverUri");
+        if (serverUri == null || serverUri.isEmpty()) {
+            result.error("InvalidParameter", "serverUri is required", null);
+            return;
+        }
+        String clientId = (String) arguments.get("clientId");
+        if (clientId == null || clientId.isEmpty()) {
+            result.error("InvalidParameter", "clientId is required", null);
+            return;
+        }
+        String topic = (String) arguments.get("topic");
+        if (topic == null || topic.isEmpty()) {
+            result.error("InvalidParameter", "topic is required", null);
+            return;
+        }
+        channelId = (Integer) arguments.get("channelId");
+        if (channelId == null) {
+            result.error("InvalidParameter", "channelId is required", null);
+            return;
+        }
+        Map<String, Object> platformChannelSpecifics = (Map<String, Object>) arguments.get("platformSpecifics");
+        this.platformChannelSpecifics = Collections.unmodifiableMap(new HashMap<>(platformChannelSpecifics));
+        subscribeTopic = topic;
+//        mqttAndroidClient = new MqttAndroidClient(registrar.activity().getApplicationContext(), "tcp://www.chenxu.biz:1883", "android-client");
+//        subscribeTopic = "iot-driver-logging";
+        mqttAndroidClient = new MqttAndroidClient(registrar.activity().getApplicationContext(), serverUri, clientId);
+        mqttAndroidClient.setCallback(new MqttCallbackExtended() {
+            @Override
+            public void connectComplete(boolean reconnect, String serverURI) {
+
+                if (reconnect) {
+                    System.out.println("Reconnected to : " + serverURI);
+                    // Because Clean Session is true, we need to re-subscribe
+                    subscribeToTopic(subscribeTopic);
+                } else {
+                    System.out.println("Connected to: " + serverURI);
+                }
+            }
+
+            @Override
+            public void connectionLost(Throwable cause) {
+                System.out.println("The Connection was lost.");
+            }
+
+            @Override
+            public void messageArrived(String topic, MqttMessage message) throws Exception {
+                System.out.println("Incoming message: " + new String(message.getPayload()));
+
+            }
+
+            @Override
+            public void deliveryComplete(IMqttDeliveryToken token) {
+
+            }
+        });
+        MqttConnectOptions mqttConnectOptions = new MqttConnectOptions();
+        mqttConnectOptions.setAutomaticReconnect(true);
+        mqttConnectOptions.setCleanSession(false);
+
+        try {
+            //addToHistory("Connecting to " + serverUri);
+            mqttAndroidClient.connect(mqttConnectOptions, null, new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    DisconnectedBufferOptions disconnectedBufferOptions = new DisconnectedBufferOptions();
+                    disconnectedBufferOptions.setBufferEnabled(true);
+                    disconnectedBufferOptions.setBufferSize(100);
+                    disconnectedBufferOptions.setPersistBuffer(false);
+                    disconnectedBufferOptions.setDeleteOldestMessages(false);
+                    mqttAndroidClient.setBufferOpts(disconnectedBufferOptions);
+                    subscribeToTopic(subscribeTopic);
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    exception.printStackTrace();
+                }
+            });
+
+            result.success(null);
+        } catch (MqttException ex) {
+            ex.printStackTrace();
+            result.error("ConnectionException", "can't connect to " + serverUri, ex);
+        }
+    }
+    private void subscribeToTopic(String subscriptionTopic) {
+        try {
+            mqttAndroidClient.subscribe(subscriptionTopic, 0, null, new IMqttActionListener() {
+                @Override
+                public void onSuccess(IMqttToken asyncActionToken) {
+                    System.out.println("Subscribed!");
+                }
+
+                @Override
+                public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
+                    System.out.println("Failed to subscribe");
+                }
+            });
+
+            // THIS DOES NOT WORK!
+            mqttAndroidClient.subscribe(subscriptionTopic, 0, new IMqttMessageListener() {
+                @Override
+                public void messageArrived(String topic, MqttMessage message) throws Exception {
+                    // message Arrived!
+                    try {
+                        String payload = new String(message.getPayload());
+                        System.out.println("messageArrived: " + topic + " : " + payload);
+                        Map<String, Object> msg = new HashMap<>();
+                        msg.put("payload", payload);
+                        msg.put(NotificationDetails.ID, channelId);
+                        msg.put(NotificationDetails.TITLE, "提醒");
+                        msg.put(NotificationDetails.BODY, payload);
+
+                        msg.put("platformSpecifics", platformChannelSpecifics);
+                        NotificationDetails notificationDetails = NotificationDetails.from(msg);
+
+                        showNotification(registrar.context(), notificationDetails);
+
+                        channel.invokeMethod("didReceiveRemoteNotification", payload);
+                    } catch (Exception e) {
+                        System.err.println("messageArrived Notification error");
+                        e.printStackTrace();
+                    }
+                }
+            });
+
+        } catch (MqttException ex){
+            System.err.println("Exception whilst subscribing");
+            ex.printStackTrace();
         }
     }
 
