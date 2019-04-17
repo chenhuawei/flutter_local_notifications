@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/services.dart';
 import 'package:meta/meta.dart';
@@ -81,6 +82,10 @@ class FlutterLocalNotificationsPlugin {
 
   DidReceiveLocalNotificationCallback didReceiveLocalNotificationCallback;
 
+  List<Completer<String>> registerForRemoteNotificationCompleterList = [];
+
+  String registerForRemoteNotificationToken;
+
   /// Initializes the plugin. Call this method on application before using the plugin further
   Future<bool> initialize(InitializationSettings initializationSettings,
       {SelectNotificationCallback onSelectNotification}) async {
@@ -108,8 +113,15 @@ class FlutterLocalNotificationsPlugin {
         result.containsKey('payload') ? result['payload'] : null);
   }
 
-  Future registerForRemoteNotifications(Map<String,dynamic> parameters) async {
-    return await _channel.invokeMethod('registerForRemoteNotifications', parameters);
+  Future<String> registerForRemoteNotifications(Map<String,dynamic> parameters) async {
+    Completer<String> completer = Completer();
+    if (registerForRemoteNotificationToken == null || registerForRemoteNotificationToken.isEmpty) {
+      registerForRemoteNotificationCompleterList.add(completer);
+      await _channel.invokeMethod('registerForRemoteNotifications', parameters);
+    } else {
+      completer.complete(registerForRemoteNotificationToken);
+    }
+    return completer.future;
   }
 
   /// Show a notification with an optional payload that will be passed back to the app when a notification is tapped
@@ -248,8 +260,12 @@ class FlutterLocalNotificationsPlugin {
             call.arguments['body'],
             call.arguments['payload']);
       case 'didRegisterForRemoteNotificationsWithDeviceToken':
-        final String token = call.arguments;
-        print('dart token $token');
+        registerForRemoteNotificationToken = call.arguments;
+        print('dart token $registerForRemoteNotificationToken');
+        registerForRemoteNotificationsCallback();
+        return null;
+      case 'didRegisterForRemoteNotificationsFailed':
+
         return null;
       case 'didReceiveRemoteNotification':
         print('dart didReceiveRemoteNotification ${call.arguments}');
@@ -257,6 +273,16 @@ class FlutterLocalNotificationsPlugin {
       default:
         return Future.error('method not defined');
     }
+  }
+
+  void registerForRemoteNotificationsCallback() {
+    if (registerForRemoteNotificationCompleterList == null || registerForRemoteNotificationCompleterList.isEmpty) {
+      return;
+    }
+    registerForRemoteNotificationCompleterList.forEach((c){
+      c.complete(registerForRemoteNotificationToken);
+    });
+    registerForRemoteNotificationCompleterList.clear();
   }
 
   void _validateId(int id) {

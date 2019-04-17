@@ -112,7 +112,7 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
 
     private Map<String, Object> platformChannelSpecifics;
 
-    Integer channelId;
+    private String notificationTitle = "Notification";
 
 
     private FlutterLocalNotificationsPlugin(Registrar registrar) {
@@ -717,6 +717,10 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
             result.error("InvalidParameter", "topic is required", null);
             return;
         }
+        String notificationTitle = (String) arguments.get("title");
+        if (notificationTitle != null && !notificationTitle.isEmpty()) {
+            this.notificationTitle = notificationTitle;
+        }
 //        channelId = (Integer) arguments.get("channelId");
 //        if (channelId == null) {
 //            result.error("InvalidParameter", "channelId is required", null);
@@ -787,17 +791,20 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
             result.error("ConnectionException", "can't connect to " + serverUri, ex);
         }
     }
-    private void subscribeToTopic(String subscriptionTopic) {
+    private void subscribeToTopic(final String subscriptionTopic) {
         try {
             mqttAndroidClient.subscribe(subscriptionTopic, 0, null, new IMqttActionListener() {
                 @Override
                 public void onSuccess(IMqttToken asyncActionToken) {
                     System.out.println("Subscribed!");
+                    //
+                    channel.invokeMethod("didRegisterForRemoteNotificationsWithDeviceToken", subscriptionTopic);
                 }
 
                 @Override
                 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
                     System.out.println("Failed to subscribe");
+                    channel.invokeMethod("didRegisterForRemoteNotificationsFailed", exception.getMessage());
                 }
             });
 
@@ -812,7 +819,7 @@ public class FlutterLocalNotificationsPlugin implements MethodCallHandler, Plugi
                         Map<String, Object> msg = new HashMap<>();
                         msg.put("payload", payload);
                         msg.put(NotificationDetails.ID, Long.valueOf(Thread.currentThread().getId()).intValue());
-                        msg.put(NotificationDetails.TITLE, "提醒");
+                        msg.put(NotificationDetails.TITLE, notificationTitle);
                         msg.put(NotificationDetails.BODY, payload);
 
                         msg.put("platformSpecifics", platformChannelSpecifics);
