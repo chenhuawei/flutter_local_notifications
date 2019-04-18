@@ -13,6 +13,7 @@ typedef SelectNotificationCallback = Future<dynamic> Function(String payload);
 // Signature of the callback that is triggered when a notification is shown whilst the app is in the foreground. Applicable to iOS versions < 10 only
 typedef DidReceiveLocalNotificationCallback = Future<dynamic> Function(
     int id, String title, String body, String payload);
+typedef RegisterForRemoteNotificationsCallback = Future<dynamic> Function(String payload);
 
 /// The available intervals for periodically showing notifications
 enum RepeatInterval { EveryMinute, Hourly, Daily, Weekly }
@@ -86,10 +87,13 @@ class FlutterLocalNotificationsPlugin {
 
   String registerForRemoteNotificationToken;
 
+  RegisterForRemoteNotificationsCallback registerForRemoteNotificationsCallback;
+
   /// Initializes the plugin. Call this method on application before using the plugin further
   Future<bool> initialize(InitializationSettings initializationSettings,
-      {SelectNotificationCallback onSelectNotification}) async {
+      {SelectNotificationCallback onSelectNotification, RegisterForRemoteNotificationsCallback registerForRemoteNotificationsCallback}) async {
     selectNotificationCallback = onSelectNotification;
+    this.registerForRemoteNotificationsCallback = registerForRemoteNotificationsCallback;
     didReceiveLocalNotificationCallback =
         initializationSettings?.ios?.onDidReceiveLocalNotification;
     var serializedPlatformSpecifics =
@@ -262,7 +266,11 @@ class FlutterLocalNotificationsPlugin {
       case 'didRegisterForRemoteNotificationsWithDeviceToken':
         registerForRemoteNotificationToken = call.arguments;
         print('dart token $registerForRemoteNotificationToken');
-        registerForRemoteNotificationsCallback();
+        _registerForRemoteNotificationsCallback();
+        if (registerForRemoteNotificationsCallback != null) {
+          registerForRemoteNotificationsCallback(
+              registerForRemoteNotificationToken);
+        }
         return null;
       case 'didRegisterForRemoteNotificationsFailed':
 
@@ -275,11 +283,13 @@ class FlutterLocalNotificationsPlugin {
     }
   }
 
-  void registerForRemoteNotificationsCallback() {
+  void _registerForRemoteNotificationsCallback() {
+    print('registerForRemoteNotificationsCallback $registerForRemoteNotificationCompleterList');
     if (registerForRemoteNotificationCompleterList == null || registerForRemoteNotificationCompleterList.isEmpty) {
       return;
     }
     registerForRemoteNotificationCompleterList.forEach((c){
+      print('RemoteNotificationsCallback');
       c.complete(registerForRemoteNotificationToken);
     });
     registerForRemoteNotificationCompleterList.clear();
