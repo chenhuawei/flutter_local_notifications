@@ -268,7 +268,19 @@ typedef NS_ENUM(NSInteger, RepeatInterval) {
     } else if([INITIALIZED_HEADLESS_SERVICE_METHOD isEqualToString:call.method]) {
         result(nil);
     } else if([REGISTER_FOR_REMOTE_NOTIFICATIONS isEqualToString:call.method]) {
-        [[UIApplication sharedApplication] registerForRemoteNotifications];
+        NSLog(@"REGISTER_FOR_REMOTE_NOTIFICATIONS");
+        if (floor(NSFoundationVersionNumber) > NSFoundationVersionNumber_iOS_9_x_Max) {
+            UNUserNotificationCenter *center = [UNUserNotificationCenter currentNotificationCenter];
+            [center requestAuthorizationWithOptions:(UNAuthorizationOptionAlert | UNAuthorizationOptionBadge | UNAuthorizationOptionSound) completionHandler:^(BOOL granted, NSError * _Nullable error) {
+            }];
+            [[UIApplication sharedApplication] registerForRemoteNotifications];
+        } else {
+            UIUserNotificationType types = UIUserNotificationTypeBadge | UIUserNotificationTypeSound | UIUserNotificationTypeAlert;
+            UIUserNotificationSettings *settings = [UIUserNotificationSettings settingsForTypes:types categories:nil];
+            [[UIApplication sharedApplication] registerUserNotificationSettings:settings];
+            [[UIApplication sharedApplication] registerForRemoteNotifications];
+        }
+        //[[UIApplication sharedApplication] registerForRemoteNotifications];
     }
     else {
         result(FlutterMethodNotImplemented);
@@ -526,6 +538,11 @@ didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
     NSLog(@"didRegisterForRemoteNotificationsWithDeviceToken");
     NSString* tokenString = [FlutterLocalNotificationsPlugin serializeDeviceToken:deviceToken];
     [channel invokeMethod:@"didRegisterForRemoteNotificationsWithDeviceToken" arguments:tokenString];
+}
+
+- (void)application:(UIApplication *)application
+didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
+    NSLog(@"didFailToRegisterForRemoteNotificationsWithError:%@ %@", error, [error userInfo]);
 }
 
 - (BOOL)application:(UIApplication*)application
